@@ -112,18 +112,31 @@ las respuestas anteriores del dispositivo). Si hay `VITE_SUPABASE_URL` y `VITE_S
   analizar (por ejemplo, ponderando por edad, género y educación según el censo: la muestra no
   es representativa).
 
-## Publicar en sosmayoria.pisubi.com (Cloudflare Pages)
+## Publicar en sosmayoria.pisubi.com
 
-El DNS de pisubi.com está en Cloudflare, así que el subdominio se configura solo.
+El sitio se despliega desde **otro repositorio**: `Pisubi/sosmayoria` (rama `main`), que Cloudflare
+Pages tiene conectado (build `npm run build`, salida `dist`, variables `VITE_SUPABASE_URL` y
+`VITE_SUPABASE_KEY`; el DNS de pisubi.com también está en Cloudflare). Este repositorio
+(`auparrino/Compass`) es donde se desarrolla, y se publica así:
 
-1. Cloudflare → Workers & Pages → Create → Pages → Connect to Git → `auparrino/Compass`.
-2. Rama de producción: la que se quiera publicar. Framework preset: Vite. Build command:
-   `npm run build`. Output: `dist`. Node sale de `.node-version` (22).
-3. Variables de entorno (Production): `VITE_SUPABASE_URL` y `VITE_SUPABASE_KEY` (la clave
-   publicable, nunca la secreta). Vite las mete en el build: si se cambian, hay que redesplegar.
-4. Custom domains → `sosmayoria.pisubi.com`. Cloudflare crea el CNAME y el certificado.
+```
+rama de trabajo ──(merge o push)──▶ produccion ──(GitHub Action)──▶ Pisubi/sosmayoria main ──▶ Cloudflare
+```
 
-Cada push a la rama de producción redespliega; las otras ramas generan vistas previas.
+- **Para publicar**: actualizar la rama `produccion` de este repo, por ejemplo
+  `git push origin <rama-de-trabajo>:produccion`, o mergeando un pull request hacia `produccion`.
+- `.github/workflows/publicar.yml` corre `lint`, `test` y `build`; si todo pasa, empuja a
+  `Pisubi/sosmayoria` `main` (sin forzar: si allá hay commits que acá no, falla en vez de pisarlos).
+  Cloudflare redespliega solo. Se sigue en la pestaña Actions y, para el deploy, en Cloudflare →
+  Workers & Pages → Deployments.
+- **Vista previa sin tocar producción**: empujar a otra rama de `Pisubi/sosmayoria`
+  (`git push <remoto-pisubi> <rama>`); Cloudflare arma una URL de prueba.
+- **Configuración inicial (ya hecha, por si hay que rehacerla)**: una clave SSH de deploy; la pública
+  va en `Pisubi/sosmayoria` → Settings → Deploy keys (con *Allow write access*) y la privada en este
+  repo → Settings → Secrets → Actions, con el nombre `SOSMAYORIA_DEPLOY_KEY`.
+- Solo `produccion` publica. Las otras ramas (incluidas las que abre Claude en cada sesión) no
+  cambian el sitio hasta que se las lleve a `produccion`.
+- No se hacen cambios directos en `Pisubi/sosmayoria`: se perderían o harían fallar la Action.
 
 ## Desarrollo
 
