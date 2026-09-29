@@ -184,6 +184,24 @@ describe('brújula política', () => {
     expect(brujula(responder({ m1: 'a', m2: 'a', m3: 'nada', v1: 'a', v2: 'a', v3: 'a' }))).toBeNull()
   })
 
+  it('explica la posición: las respuestas que más pesaron, del lado que empujaron', () => {
+    const pesoDeM3 = (eleccion: Eleccion) =>
+      brujula(responder({ m1: 'a', m2: 'b', m3: eleccion, v1: 'a', v2: 'b', v3: 'a' }))!.motivos.economia.find(
+        (m) => m.carta.id === 'm3',
+      )!
+    // m3 (80% A, lado +): elegir B (lo de pocos) pesa más que elegir A (lo de casi todos).
+    const rara = pesoDeM3('b')
+    const comun = pesoDeM3('a')
+    expect(rara.lado).toBe('menos')
+    expect(comun.lado).toBe('mas')
+    expect(rara.peso).toBeGreaterThan(comun.peso)
+    const b = brujula(responder({ m1: 'a', m2: 'b', m3: 'b', v1: 'a', v2: 'b', v3: 'a' }))!
+    expect(b.motivos.economia).toHaveLength(3)
+    expect(b.motivos.economia.map((m) => m.peso)).toEqual([...b.motivos.economia.map((m) => m.peso)].sort((x, y) => y - x))
+    // Autoridad sin respuestas suficientes no explica nada.
+    expect(b.motivos.autoridad).toEqual([])
+  })
+
   it('nombra el centro y cada escala', () => {
     expect(cuadrante({ economia: 0.1, valores: -0.1, autoridad: 0 })).toBe('Cerca del promedio')
     expect(cuadrante({ economia: -0.5, valores: 0, autoridad: 0 })).toBe('Más Estado, centro en valores')

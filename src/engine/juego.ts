@@ -54,11 +54,8 @@ function mezclar<T>(items: T[], next: () => number): T[] {
   return out
 }
 
-/**
- * Mínimo de cartas de cada escala por ronda, núcleo incluidas, para que la brújula tenga base.
- * Autoridad se sigue calculando pero no se muestra, así que no reserva lugar en la ronda.
- */
-export const CUPO: Record<NombreEje, number> = { economia: 8, valores: 6, autoridad: 0 }
+/** Mínimo de cartas de cada escala por ronda, núcleo incluidas, para que la brújula tenga base. */
+export const CUPO: Record<NombreEje, number> = { economia: 8, valores: 6, autoridad: 5 }
 
 /**
  * Sortea una ronda: las cartas núcleo siempre, repartidas en lugares al azar; después las
@@ -215,7 +212,7 @@ export function perfil(conLaMayoria: number, definidas: number): { titulo: strin
   return { titulo: 'Minoría intensa', texto: 'Casi siempre elegís lo que eligen menos argentinos.' }
 }
 
-/** Las tres escalas de la brújula. La brújula dibuja economía × valores; autoridad no se muestra. */
+/** Las tres escalas de la brújula. La brújula dibuja economía × valores; autoridad va aparte, en una barra. */
 export const EJES: readonly NombreEje[] = ['economia', 'valores', 'autoridad']
 
 export const esIdeologica = (c: Carta): boolean => EJES.some((e) => c.eje?.[e])
@@ -232,12 +229,34 @@ export const esExtrema = (c: Carta): boolean => esIdeologica(c) && c.tipo === 'a
 /** Posición en cada escala, de -1 a 1; 0 es el argentino promedio según las encuestas. */
 export type Posicion = Record<NombreEje, number>
 
+/** Una respuesta que pesó en una escala, para explicar de dónde sale la posición. */
+export interface Motivo {
+  carta: Carta
+  eleccion: 'a' | 'b'
+  /** Si lo que elegiste es el lado + de la escala (más mercado / tradicional / orden) o el lado −. */
+  lado: 'mas' | 'menos'
+  /** Cuánto se movería tu posición (en desvíos del país) si no hubieras contestado esa carta; siempre positivo. */
+  peso: number
+}
+
 export interface Brujula {
   vos: Posicion
   /** Cuántas respuestas cuentan en cada escala. */
   cartas: Record<NombreEje, number>
   precision: 'aproximada' | 'buena' | 'muy buena'
+  /** Las respuestas que más pesaron en cada escala, de mayor a menor. */
+  motivos: Record<NombreEje, Motivo[]>
 }
+
+/** Los dos lados de cada escala: [− , +]. */
+export const LADOS: Record<NombreEje, [string, string]> = {
+  economia: ['más Estado', 'más mercado'],
+  valores: ['progresista', 'tradicional'],
+  autoridad: ['más garantías', 'más orden'],
+}
+
+/** Cuántos motivos se guardan por escala. */
+export const MOTIVOS = 3
 
 /** Respuestas mínimas por escala para ubicar a alguien. */
 export const MINIMO_EJE = 3
@@ -262,6 +281,8 @@ const PREVIA = 1.5
 const GRILLA = Array.from({ length: 161 }, (_, i) => -4 + i * 0.05)
 
 interface Item {
+  carta: Carta
+  eleccion: 'a' | 'b'
   /** Discriminación (1,7 por el peso de la carta en la escala). */
   a: number
   /** Dificultad del lado +. */
@@ -323,17 +344,33 @@ export function brujula(respuestas: { carta: Carta; eleccion: Eleccion }[]): Bru
       const a = DISCRIMINACION * Math.abs(w)
       // Lado + de la escala: A si el eje es positivo, B si es negativo.
       const q = w > 0 ? pA : 1 - pA
-      items[e].push({ a, b: dificultad(q, a), mas: (eleccion === 'a') === w > 0 })
+      items[e].push({ carta, eleccion, a, b: dificultad(q, a), mas: (eleccion === 'a') === w > 0 })
     }
   }
   const cartas = { economia: items.economia.length, valores: items.valores.length, autoridad: items.autoridad.length }
   if (cartas.economia < MINIMO_EJE || cartas.valores < MINIMO_EJE) return null
   const pos = (e: NombreEje) => (cartas[e] < MINIMO_EJE ? 0 : 2 * normal(posicion(items[e])) - 1)
   const base = Math.min(cartas.economia, cartas.valores)
+  // Cuánto habría cambiado la posición sin cada respuesta: mide el peso de cada una sin que lo tape
+  // el borde del gráfico (quien está cerca de +1 casi no se mueve, pero sí su posición real).
+  const motivo = (e: NombreEje): Motivo[] => {
+    if (cartas[e] < MINIMO_EJE) return []
+    const total = posicion(items[e])
+    return items[e]
+      .map((it, i) => ({
+        carta: it.carta,
+        eleccion: it.eleccion,
+        lado: it.mas ? ('mas' as const) : ('menos' as const),
+        peso: Math.abs(total - posicion(items[e].filter((_, k) => k !== i))),
+      }))
+      .sort((x, y) => y.peso - x.peso)
+      .slice(0, MOTIVOS)
+  }
   return {
     vos: { economia: pos('economia'), valores: pos('valores'), autoridad: pos('autoridad') },
     cartas,
     precision: base >= 16 ? 'muy buena' : base >= 8 ? 'buena' : 'aproximada',
+    motivos: { economia: motivo('economia'), valores: motivo('valores'), autoridad: motivo('autoridad') },
   }
 }
 

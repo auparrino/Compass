@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cartas, orden, todas, TEMAS } from '../src/data/cartas'
-import { brujula, CUPO, EJES, esExtrema, mideBrujula, RONDA, sortear } from '../src/engine/juego'
+import { brujula, CUPO, EJES, esExtrema, mideBrujula, MINIMO_EJE, RONDA, sortear } from '../src/engine/juego'
 import type { Carta, NombreEje } from '../src/types'
 import fotos from '../src/data/fotos.json'
 import guardado from './orden-cartas.json'
@@ -136,6 +136,13 @@ describe('banco de cartas', () => {
     for (const c of cartas.filter((x) => x.eje?.economia || x.eje?.valores)) {
       const p = (100 * c.ref.a) / (c.ref.a + c.ref.b)
       if (Math.max(p, 100 - p) >= 78) expect(esExtrema(c), c.id).toBe(true)
+    }
+  })
+
+  it('cada ronda trae respuestas de autoridad suficientes para mostrar la barra', () => {
+    for (let s = 0; s < 200; s++) {
+      const r = sortear(cartas, s).map((carta) => ({ carta, eleccion: 'a' as const }))
+      expect(brujula(r)!.cartas.autoridad, `semilla ${s}`).toBeGreaterThanOrEqual(MINIMO_EJE)
     }
   })
 

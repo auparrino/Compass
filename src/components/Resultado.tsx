@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cartas, TEMAS } from '../data/cartas'
-import { brujula, cuadrante, perfil, temaDistinto, type Lectura, type Lugar, type Resumen } from '../engine/juego'
+import { brujula, cuadrante, enPalabras, LADOS, MINIMO_EJE, perfil, temaDistinto, type Lectura, type Lugar, type Resumen } from '../engine/juego'
+import type { NombreEje } from '../types'
 import { renderShareImage, type Tarjeta } from '../lib/compartir'
 import { borrarHistorial, type Historial } from '../lib/guardado'
 import { fecha } from '../lib/formato'
@@ -85,12 +86,15 @@ export function Resultado({ resumen, historial, onOtraRonda, onMethodology }: Re
           <h2 className="mt-4 text-2xl font-bold">{cuadrante(b.vos)}</h2>
           <p className="mt-2 leading-7 text-azul/75">
             Comparado con el argentino promedio.
+            {b.cartas.autoridad >= MINIMO_EJE && ` En autoridad: ${enPalabras('autoridad', b.vos.autoridad)}.`}
           </p>
           <div className="mt-6">
             <BrujulaPolitica b={b} />
           </div>
+          <Motivos b={b} />
           <p className="mx-auto mt-5 max-w-md text-xs leading-5 text-azul/55">
-            Precisión {b.precision}: {b.cartas.economia} respuestas sobre economía y {b.cartas.valores} sobre valores
+            Precisión {b.precision}: {b.cartas.economia} respuestas sobre economía, {b.cartas.valores} sobre valores
+            {b.cartas.autoridad >= MINIMO_EJE && ` y ${b.cartas.autoridad} sobre autoridad`}
             {historial.rondas > 1 ? `, sumando tus ${historial.rondas} rondas` : ''}. El centro es lo que respondió el
             país en las encuestas: elegir lo que eligió casi todo el mundo te mueve poco; elegir lo de pocos, mucho.
             {b.precision !== 'muy buena' && ' Cada ronda nueva la afina.'}{' '}
@@ -233,5 +237,42 @@ function Compartir({ texto, tarjeta }: { texto: string; tarjeta: Omit<Tarjeta, '
     >
       {estado === 'generando' ? 'Generando…' : estado === 'copiado' ? 'Imagen descargada y texto copiado' : 'Compartir en historias'}
     </button>
+  )
+}
+
+const ESCALAS: { eje: NombreEje; nombre: string }[] = [
+  { eje: 'economia', nombre: 'Economía' },
+  { eje: 'valores', nombre: 'Valores' },
+  { eje: 'autoridad', nombre: 'Autoridad' },
+]
+
+/** De dónde sale la posición en cada escala: las respuestas que más pesaron. */
+function Motivos({ b }: { b: NonNullable<ReturnType<typeof brujula>> }) {
+  const escalas = ESCALAS.filter(({ eje }) => b.motivos[eje].length > 0)
+  return (
+    <details className="mx-auto mt-6 max-w-md rounded-2xl border border-azul/15 bg-papel px-5 py-4 text-sm">
+      <summary className="cursor-pointer font-semibold">Qué te movió más</summary>
+      <div className="mt-4 grid gap-5">
+        {escalas.map(({ eje, nombre }) => (
+          <div key={eje}>
+            <p className="text-xs font-semibold tracking-wide text-azul/55 uppercase">{nombre}</p>
+            <ul className="mt-2 grid gap-2">
+              {b.motivos[eje].map((m) => (
+                <li key={m.carta.id} className="leading-6">
+                  <span className="font-semibold">{m.carta.pregunta}</span>{' '}
+                  <span className="text-azul/65">
+                    Elegiste «{m.eleccion === 'a' ? m.carta.a.texto : m.carta.b.texto}» →{' '}
+                    {LADOS[eje][m.lado === 'mas' ? 1 : 0]}.
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-azul/55">
+        Pesan más las respuestas que se apartan de lo que eligió el país; las que coinciden con casi todos mueven poco.
+      </p>
+    </details>
   )
 }

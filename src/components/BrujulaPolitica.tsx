@@ -1,13 +1,13 @@
-import type { Brujula } from '../engine/juego'
+import { MINIMO_EJE, type Brujula } from '../engine/juego'
 
 /** Cuánto del cuadro usa el recorrido de -1 a 1 (en %), para que el punto no toque el borde. */
 const ALCANCE = 42
 
 /**
- * Economía × valores, con el argentino promedio en el centro.
+ * Economía × valores, con el argentino promedio en el centro, y abajo la escala de autoridad.
  */
 export function BrujulaPolitica({ b }: { b: Brujula }) {
-  const { economia, valores } = b.vos
+  const { economia, valores, autoridad } = b.vos
   return (
     <figure className="mx-auto w-full max-w-md">
       <div
@@ -52,6 +52,26 @@ export function BrujulaPolitica({ b }: { b: Brujula }) {
         </span>
       </figcaption>
 
+      {b.cartas.autoridad >= MINIMO_EJE && (
+        <div className="mt-6">
+          <div className="flex justify-between text-[11px] font-semibold tracking-wide text-azul/55 uppercase sm:text-xs">
+            <span>Más garantías</span>
+            <span>Autoridad</span>
+            <span>Más orden</span>
+          </div>
+          <div
+            className="relative mt-2 h-3 rounded-full bg-gradient-to-r from-azul/10 via-arena/40 to-naranja/15"
+            role="img"
+            aria-label={`Autoridad ${pct(autoridad)} (negativo, más garantías; positivo, más orden). Cero es el promedio del país.`}
+          >
+            <span className="absolute inset-y-[-4px] left-1/2 w-px bg-azul/40" />
+            <span
+              className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-papel bg-naranja ring-4 ring-naranja/25"
+              style={{ left: `${50 + autoridad * ALCANCE}%` }}
+            />
+          </div>
+        </div>
+      )}
     </figure>
   )
 }
