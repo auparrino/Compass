@@ -50,6 +50,15 @@ describe('sortear', () => {
     expect(r.filter((c) => !vistas.has(c.id))).toHaveLength(16)
   })
 
+  it('con temas elegidos, todas las cartas son de esos temas, núcleo incluidas', () => {
+    const conNucleo = [...banco, { ...carta('n1', 50, 50, 'historia'), nucleo: true }, { ...carta('n2', 50, 50, 'cultura'), nucleo: true }]
+    for (let s = 0; s < 20; s++) {
+      const r = sortear(conNucleo, s, new Set(), new Set<Tema>(['politica', 'cultura']))
+      expect(r.length).toBeGreaterThan(0)
+      expect(r.every((c) => c.tema === 'politica' || c.tema === 'cultura')).toBe(true)
+    }
+  })
+
   it('intercala temas: nunca tres seguidas del mismo', () => {
     for (let s = 0; s < 50; s++) {
       const r = sortear(banco, s)

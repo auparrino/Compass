@@ -74,10 +74,10 @@ export function sortear(
   n = RONDA,
 ): Carta[] {
   const next = random(seed)
-  const nucleo = cartas.filter((c) => c.nucleo && !c.retirada)
-  const activas = cartas.filter(
-    (c) => !c.retirada && !c.nucleo && (!temas || temas.size === 0 || temas.has(c.tema)),
-  )
+  // Con temas elegidos, ni siquiera las núcleo se salen de ellos: la ronda tiene que ser de esos temas.
+  const delTema = (c: Carta) => !temas || temas.size === 0 || temas.has(c.tema)
+  const nucleo = cartas.filter((c) => c.nucleo && !c.retirada && delTema(c))
+  const activas = cartas.filter((c) => !c.retirada && !c.nucleo && delTema(c))
   const candidatas = [
     ...mezclar(activas.filter((c) => !vistas.has(c.id)), next),
     ...mezclar(activas.filter((c) => vistas.has(c.id)), next),
