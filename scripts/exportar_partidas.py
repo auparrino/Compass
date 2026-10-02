@@ -65,9 +65,9 @@ def fetch_rows():
 
 
 def main():
-    cartas = json.load(open(f'{ROOT}/src/data/cartas.json'))['cartas']
+    cartas = json.load(open(f'{ROOT}/src/data/cartas.json', encoding='utf-8'))['cartas']
     if '--csv' in sys.argv:
-        rows = list(csv.DictReader(open(sys.argv[sys.argv.index('--csv') + 1], encoding='utf-8')))
+        rows = list(csv.DictReader(open(sys.argv[sys.argv.index('--csv') + 1], encoding='utf-8-sig')))
     else:
         rows = fetch_rows()
     invalid = n = 0
