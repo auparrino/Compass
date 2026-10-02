@@ -22,11 +22,25 @@ ELECCION = {1: 'A', 2: 'B', 3: 'no dice'}
 MARGEN = 3  # igual que MARGEN en src/engine/juego.ts
 
 
+def a_bytes(valor):
+    """Bytes de la columna bytea, venga como \\x…, hex pelado o base64 (según cómo se exportó)."""
+    v = (valor or '').strip().strip('"')
+    h = v[2:] if v[:2] in ('\\x', '0x') else v
+    try:
+        return bytes.fromhex(h)
+    except ValueError:
+        pass
+    try:
+        import base64
+        return base64.b64decode(v, validate=True)
+    except ValueError:
+        return None
+
+
 def decodificar(hex_str, cartas):
     """Lista de (carta, elección), o None si la fila no es válida (ver src/engine/codificacion.ts)."""
-    try:
-        raw = bytes.fromhex(hex_str.removeprefix('\\x'))
-    except ValueError:
+    raw = a_bytes(hex_str)
+    if raw is None:
         return None
     if not raw or len(raw) % 2:
         return None
@@ -84,6 +98,8 @@ def main():
             jugadas = decodificar(r['jugadas'], cartas)
             if jugadas is None:
                 invalid += 1
+                if invalid == 1:
+                    print(f"Primera fila inválida: id={r.get('id')} jugadas={r.get('jugadas')!r}", file=sys.stderr)
                 continue
             elegido = {c['id']: (c['a']['texto'] if e == 'A' else c['b']['texto'] if e == 'B' else 'no dice')
                        for c, e in jugadas}
