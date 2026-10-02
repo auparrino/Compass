@@ -25,6 +25,11 @@ MARGEN = 3  # igual que MARGEN en src/engine/juego.ts
 def a_bytes(valor):
     """Bytes de la columna bytea, venga como \\x…, hex pelado o base64 (según cómo se exportó)."""
     v = (valor or '').strip().strip('"')
+    if v.startswith('{'):  # el panel de Supabase exporta {"type":"Buffer","data":[64,103,…]}
+        try:
+            return bytes(json.loads(valor)['data'])
+        except (ValueError, KeyError, TypeError):
+            return None
     h = v[2:] if v[:2] in ('\\x', '0x') else v
     try:
         return bytes.fromhex(h)
