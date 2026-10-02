@@ -97,10 +97,10 @@ describe('cartas núcleo', () => {
     }
   })
 
-  it('salen aunque se filtre por tema', () => {
+  it('si se filtra por tema, solo salen las de esos temas', () => {
     const r = sortear(banco, 3, new Set(), new Set<Tema>(['cultura']))
-    expect(r.filter((c) => c.nucleo)).toHaveLength(5)
-    expect(r.filter((c) => !c.nucleo).every((c) => c.tema === 'cultura')).toBe(true)
+    expect(r.every((c) => c.tema === 'cultura')).toBe(true)
+    expect(r.filter((c) => c.nucleo).length).toBe(banco.filter((c) => c.nucleo && c.tema === 'cultura').length)
   })
 })
 
